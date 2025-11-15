@@ -7,6 +7,9 @@ import zipfile
 from pathlib import Path
 import uuid
 
+# Version
+VERSION = "v0.1"
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
@@ -65,7 +68,7 @@ def convert_png_to_jpg(image_file, max_width, max_height, quality=90, dpi=(300, 
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', version=VERSION)
 
 @app.route('/convert', methods=['POST'])
 def convert():

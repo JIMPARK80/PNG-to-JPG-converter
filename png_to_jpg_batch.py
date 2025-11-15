@@ -1,13 +1,16 @@
 from pathlib import Path
 from PIL import Image
 
+# Version
+VERSION = "v0.1"
+
 # 1. Set input / output folders
 input_dir = Path("input")
 output_dir = Path("output")
 output_dir.mkdir(exist_ok=True)
 
 # 2. Get target size from user input / 사용자로부터 해상도 입력받기
-print("=== PNG to JPG Batch Converter ===")
+print(f"=== PNG to JPG Batch Converter {VERSION} ===")
 print("해상도를 입력하세요 (예: 6000x6000 또는 4000x4000)")
 print("Enter resolution (e.g., 6000x6000 or 4000x4000)")
 print("엔터만 누르면 기본값 4000x4000을 사용합니다 / Press Enter for default 4000x4000")

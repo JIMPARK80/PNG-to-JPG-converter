@@ -1,4 +1,4 @@
-# PNG to JPG Batch Converter
+# PNG to JPG Batch Converter v0.1
 
 A simple Python script to batch convert PNG images to JPG format with resizing and DPI adjustment.
 
