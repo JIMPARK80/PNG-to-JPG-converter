@@ -17,30 +17,73 @@ PNG 이미지를 JPG로 일괄 변환하고 리사이즈 및 DPI를 조정하는
 
 ## Installation / 설치
 
-1. Install Python (if not already installed)
-   파이썬이 없다면 먼저 파이썬을 설치합니다.
+### 1. Install Python / 파이썬 설치
 
-2. Activate virtual environment (if using one) / 가상환경 활성화 (사용하는 경우)
-   ```bash
-   # Windows Command Prompt
-   D:\GameMake\myenv\Scripts\activate.bat
-   
-   # Windows PowerShell
-   D:\GameMake\myenv\Scripts\Activate.ps1
-   ```
+Download and install Python 3.11 or later from the official website:
+공식 웹사이트에서 Python 3.11 이상 버전을 다운로드하여 설치하세요:
 
-3. Install dependencies using pip:
-   pip로 의존성을 설치합니다:
+- **Download**: [https://www.python.org/downloads/](https://www.python.org/downloads/)
+- **Recommended**: Python 3.11 or 3.12 (latest stable version)
+- **권장**: Python 3.11 또는 3.12 (최신 안정 버전)
+
+**Important / 중요사항:**
+- Check "Add Python to PATH" during installation
+- 설치 시 "Add Python to PATH" 옵션을 체크하세요
+- Verify installation: `python --version` or `python3 --version`
+- 설치 확인: `python --version` 또는 `python3 --version`
+
+### 2. Create Virtual Environment / 가상환경 생성 (권장)
+
+It's recommended to use a virtual environment to avoid conflicts with other projects.
+다른 프로젝트와의 충돌을 방지하기 위해 가상환경 사용을 권장합니다.
+
+**Windows:**
+```bash
+# Create virtual environment / 가상환경 생성
+python -m venv venv
+
+# Activate virtual environment / 가상환경 활성화
+# Command Prompt:
+venv\Scripts\activate.bat
+
+# PowerShell:
+venv\Scripts\Activate.ps1
+```
+
+**macOS/Linux:**
+```bash
+# Create virtual environment / 가상환경 생성
+python3 -m venv venv
+
+# Activate virtual environment / 가상환경 활성화
+source venv/bin/activate
+```
+
+**Note / 참고:**
+- After activation, you'll see `(venv)` in your terminal prompt
+- 활성화 후 터미널 프롬프트에 `(venv)`가 표시됩니다
+- To deactivate: `deactivate`
+- 비활성화: `deactivate`
+
+### 3. Install Dependencies / 의존성 설치
+
+Install required packages:
+필요한 패키지를 설치합니다:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Or install Pillow directly:
-또는 Pillow를 직접 설치:
+Or install packages individually:
+또는 개별적으로 설치:
 
 ```bash
-pip install pillow
+pip install Pillow Flask Werkzeug gunicorn
+```
+
+**Verify installation / 설치 확인:**
+```bash
+pip list
 ```
 
 ## Usage / 사용법
@@ -54,16 +97,22 @@ pip install pillow
 3. Run the script:
    스크립트를 실행합니다:
 
-   **Option 1: Using batch file (recommended) / 배치 파일 사용 (권장)**
-   - Double-click `run_converter.bat`
-   - `run_converter.bat` 더블클릭 or 실행명령어 .\run_converter.bat (PowerShell)
-   - The batch file automatically activates the virtual environment
-   - 배치 파일이 자동으로 가상환경을 활성화합니다
+   **Option 1: Using batch file (Windows only) / 배치 파일 사용 (Windows 전용)**
+   ```bash
+   # Double-click run_converter.bat or run in terminal:
+   # run_converter.bat를 더블클릭하거나 터미널에서 실행:
+   .\run_converter.bat
+   ```
+   **Note:** The batch file assumes a virtual environment at `venv\Scripts\activate.bat`
+   **참고:** 배치 파일은 `venv\Scripts\activate.bat`에 가상환경이 있다고 가정합니다
 
    **Option 2: Manual execution / 수동 실행**
    ```bash
-   # Activate virtual environment first / 먼저 가상환경 활성화
-   D:\GameMake\myenv\Scripts\activate.bat
+   # Activate virtual environment first (if using one) / 가상환경 활성화 (사용하는 경우)
+   # Windows:
+   venv\Scripts\activate
+   # macOS/Linux:
+   source venv/bin/activate
    
    # Then run the script / 그 다음 스크립트 실행
    python png_to_jpg_batch.py
@@ -148,8 +197,11 @@ See `DEPLOYMENT.md` for detailed deployment instructions.
 Double-click `run_converter.bat` to run the script easily on Windows.
 윈도우에서 `run_converter.bat`를 더블클릭하면 쉽게 실행할 수 있습니다.
 
-The batch file automatically activates the virtual environment at `D:\GameMake\myenv\Scripts` before running the script.
-배치 파일은 스크립트 실행 전에 `D:\GameMake\myenv\Scripts`의 가상환경을 자동으로 활성화합니다.
+**Note / 참고:**
+- The batch file assumes a virtual environment named `venv` in the project directory
+- 배치 파일은 프로젝트 디렉토리에 `venv`라는 이름의 가상환경이 있다고 가정합니다
+- If you use a different virtual environment name or path, edit `run_converter.bat`
+- 다른 가상환경 이름이나 경로를 사용한다면 `run_converter.bat`를 수정하세요
 
 ## Notes / 참고사항
 
