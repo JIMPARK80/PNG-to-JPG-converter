@@ -250,7 +250,7 @@ You can modify these settings in `png_to_jpg_batch.py`:
 
 A web-based version is available for server deployment!
 
-![Web Interface Screenshot](docs/images/web-interface.png)
+![Web Interface Screenshot](docs/images/pngToJpg%20converter.png)
 
 ### Quick Start
 
@@ -288,7 +288,7 @@ See `DEPLOYMENT.md` for detailed deployment instructions.
 
 서버 배포용 웹 버전이 제공됩니다!
 
-![웹 인터페이스 스크린샷](docs/images/web-interface.png)
+![웹 인터페이스 스크린샷](docs/images/pngToJpg%20converter.png)
 
 ### 빠른 시작
 
