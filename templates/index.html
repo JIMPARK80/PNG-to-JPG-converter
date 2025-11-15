@@ -243,18 +243,77 @@
         const loading = document.getElementById('loading');
         const submitBtn = document.getElementById('submitBtn');
         
-        form.addEventListener('submit', function(e) {
+        // 로딩 상태 리셋 함수
+        function resetLoadingState() {
+            loading.classList.remove('active');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '변환하기 / Convert';
+        }
+        
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
             const files = document.getElementById('files').files;
             if (files.length === 0) {
-                e.preventDefault();
                 alert('파일을 선택해주세요 / Please select files');
                 return;
             }
             
+            // 로딩 상태 표시
             loading.classList.add('active');
             submitBtn.disabled = true;
             submitBtn.textContent = '변환 중... / Converting...';
+            
+            try {
+                // FormData 생성
+                const formData = new FormData(form);
+                
+                // 서버에 요청 전송
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('변환 실패 / Conversion failed');
+                }
+                
+                // 응답을 Blob으로 받기
+                const blob = await response.blob();
+                
+                // 파일 다운로드
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Content-Disposition 헤더에서 파일명 추출
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'converted_images.zip';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                // 다운로드 완료 후 로딩 상태 리셋
+                setTimeout(resetLoadingState, 500);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('변환 중 오류가 발생했습니다 / An error occurred during conversion');
+                resetLoadingState();
+            }
         });
+        
+        // 페이지 로드 시 로딩 상태 리셋 (이전 상태가 남아있을 경우)
+        window.addEventListener('load', resetLoadingState);
     </script>
 </body>
 </html>
