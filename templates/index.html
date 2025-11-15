@@ -336,9 +336,13 @@
                 // 응답을 Blob으로 받기
                 const blob = await response.blob();
                 
+                // Content-Type 확인
+                const contentType = response.headers.get('Content-Type');
+                const isZipFile = contentType && contentType.includes('application/zip');
+                
                 // Content-Disposition 헤더에서 파일명 추출
                 const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = 'converted_images.zip';
+                let filename = isZipFile ? 'converted_images.zip' : 'converted_image.jpg';
                 if (contentDisposition) {
                     const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
                     if (filenameMatch && filenameMatch[1]) {
@@ -348,7 +352,7 @@
                 
                 // 파일 개수 확인
                 const fileCount = files.length;
-                const isZip = filename.endsWith('.zip');
+                const isZip = isZipFile || filename.endsWith('.zip');
                 
                 // 다운로드 링크 생성 및 표시
                 const url = window.URL.createObjectURL(blob);
