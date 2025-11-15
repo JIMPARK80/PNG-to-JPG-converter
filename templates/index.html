@@ -341,14 +341,34 @@
                     }
                 }
                 
+                // 파일 개수 확인
+                const fileCount = files.length;
+                const isZip = filename.endsWith('.zip');
+                
                 // 다운로드 링크 생성 및 표시
                 const url = window.URL.createObjectURL(blob);
                 const downloadLink = document.getElementById('downloadLink');
                 const downloadSection = document.getElementById('downloadSection');
+                const downloadInfo = downloadSection.querySelector('.download-info');
                 
                 downloadLink.href = url;
                 downloadLink.download = filename;
-                downloadLink.textContent = `📥 ${filename} 다운로드 / Download ${filename}`;
+                
+                // 다운로드 버튼 텍스트 설정
+                if (isZip && fileCount > 1) {
+                    downloadLink.textContent = `📦 ${fileCount}개 파일 압축 다운로드 / Download ${fileCount} files as ZIP`;
+                    downloadInfo.innerHTML = `
+                        <strong>✅ 변환 완료! / Conversion Complete!</strong><br>
+                        ${fileCount}개의 파일이 압축되어 있습니다 / ${fileCount} files are compressed<br>
+                        아래 버튼을 클릭하여 저장 위치를 선택하세요 / Click the button below to choose save location
+                    `;
+                } else {
+                    downloadLink.textContent = `📥 ${filename} 다운로드 / Download ${filename}`;
+                    downloadInfo.innerHTML = `
+                        <strong>✅ 변환 완료! / Conversion Complete!</strong><br>
+                        아래 버튼을 클릭하여 저장 위치를 선택하세요 / Click the button below to choose save location
+                    `;
+                }
                 
                 // 다운로드 섹션 표시
                 downloadSection.classList.add('active');
