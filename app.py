@@ -93,8 +93,8 @@ def convert():
             max_width = size
             max_height = size
     except ValueError:
-        max_width = 4000
-        max_height = 4000
+        max_width = 6000
+        max_height = 6000
     
     # Get quality
     quality = int(request.form.get('quality', 90))
@@ -161,7 +161,7 @@ def api_convert():
         return jsonify({'error': 'Invalid file type. Only PNG files allowed.'}), 400
     
     # Get parameters
-    resolution = request.form.get('resolution', '4000x4000').strip()
+    resolution = request.form.get('resolution', '6000x6000').strip()
     try:
         if 'x' in resolution.lower():
             parts = resolution.lower().split('x')
@@ -172,8 +172,8 @@ def api_convert():
             max_width = size
             max_height = size
     except ValueError:
-        max_width = 4000
-        max_height = 4000
+        max_width = 6000
+        max_height = 6000
     
     quality = int(request.form.get('quality', 90))
     

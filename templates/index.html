@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PNG to JPG Converter {{ version }} / PNG 일괄 JPG 변환기</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -277,10 +278,10 @@
         
         <div class="info-box">
             <strong>사용 방법 / How to Use:</strong><br>
-            1. PNG 파일을 선택하세요 / Select PNG files<br>
-            2. 원하는 해상도를 입력하세요 / Enter desired resolution<br>
+            1. PNG 파일을 선택하세요 / Select PNG files (저장 목록 초기화 / Download list resets)<br>
+            2. (선택) 해상도와 품질을 변경하세요 / (Optional) Change resolution and quality<br>
             3. 변환하기 버튼을 클릭하세요 / Click Convert button<br>
-            4. 변환된 파일이 자동으로 다운로드됩니다 / Converted files will be downloaded automatically
+            4. 변환 완료 후 다운로드 버튼을 클릭하여 저장하세요 / Click download button to save after conversion
         </div>
     </div>
     
@@ -288,183 +289,337 @@
         const form = document.getElementById('convertForm');
         const loading = document.getElementById('loading');
         const submitBtn = document.getElementById('submitBtn');
+        const filesInput = document.getElementById('files');
+        let isConverting = false;
         
         // 로딩 상태 리셋 함수
         function resetLoadingState() {
             loading.classList.remove('active');
             submitBtn.disabled = false;
             submitBtn.textContent = '변환하기 / Convert';
+            isConverting = false;
         }
         
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // 저장 함수 (별도 분리)
+        async function saveToFolder(blob, filename, isZip, fileCount, url, downloadLink, downloadInfo) {
+            // File System Access API 지원 확인
+            if (!window.showDirectoryPicker) {
+                // 지원하지 않는 브라우저는 기본 다운로드
+                alert('이 브라우저는 폴더 선택을 지원하지 않습니다. 기본 다운로드로 진행합니다.\nThis browser does not support folder selection. Using default download.');
+                downloadLink.href = url;
+                downloadLink.click();
+                return;
+            }
             
-            const files = document.getElementById('files').files;
+            try {
+                // 폴더 선택 팝업 표시
+                const directoryHandle = await window.showDirectoryPicker();
+                
+                // 로딩 표시
+                downloadLink.textContent = '저장 중... / Saving...';
+                downloadLink.style.pointerEvents = 'none';
+                
+                if (isZip && fileCount > 1) {
+                    // ZIP 파일 압축 해제 및 저장
+                    const zip = await JSZip.loadAsync(blob);
+                    let savedCount = 0;
+                    
+                    for (const [relativePath, file] of Object.entries(zip.files)) {
+                        if (!file.dir) {
+                            const fileData = await file.async('blob');
+                            const fileHandle = await directoryHandle.getFileHandle(relativePath, { create: true });
+                            const writable = await fileHandle.createWritable();
+                            await writable.write(fileData);
+                            await writable.close();
+                            savedCount++;
+                        }
+                    }
+                    
+                    downloadLink.textContent = `✅ ${savedCount}개 파일 저장 완료! / ${savedCount} files saved!`;
+                    downloadInfo.innerHTML = `
+                        <strong>✅ 저장 완료! / Save Complete!</strong><br>
+                        ${savedCount}개의 파일이 선택한 폴더에 저장되었습니다 / ${savedCount} files saved to selected folder
+                    `;
+                } else {
+                    // 단일 파일 저장
+                    const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    
+                    downloadLink.textContent = `✅ 저장 완료! / Save Complete!`;
+                    downloadInfo.innerHTML = `
+                        <strong>✅ 저장 완료! / Save Complete!</strong><br>
+                        파일이 선택한 폴더에 저장되었습니다 / File saved to selected folder
+                    `;
+                }
+                
+                // URL 정리
+                window.URL.revokeObjectURL(url);
+                if (downloadLink.dataset.previousUrl) {
+                    delete downloadLink.dataset.previousUrl;
+                }
+                
+                // 저장 완료 후 포인터 이벤트 복원
+                downloadLink.style.pointerEvents = 'auto';
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    // 사용자가 취소한 경우
+                    downloadLink.textContent = isZip && fileCount > 1 
+                        ? `📦 ${fileCount}개 파일 저장 폴더 선택 / Choose folder for ${fileCount} files`
+                        : `📥 ${filename} 저장 폴더 선택 / Choose folder for ${filename}`;
+                } else {
+                    console.error('Error:', error);
+                    alert('저장 중 오류가 발생했습니다 / An error occurred while saving: ' + error.message);
+                    // 오류 발생 시 기본 다운로드로 폴백
+                    downloadLink.href = url;
+                    downloadLink.click();
+                }
+                downloadLink.style.pointerEvents = 'auto';
+            }
+        }
+        
+        // 단일 파일 변환 함수
+        async function convertSingleFile(file, resolution, quality) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('resolution', resolution);
+            formData.append('quality', quality);
+            
+            const response = await fetch('/api/convert', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`변환 실패: ${file.name} / Conversion failed: ${file.name}`);
+            }
+            
+            const blob = await response.blob();
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = file.name.replace('.png', '.jpg');
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1].replace(/['"]/g, '');
+                }
+            }
+            
+            return { blob, filename };
+        }
+        
+        // 여러 파일을 개별적으로 저장하는 함수
+        async function saveMultipleFiles(files, directoryHandle) {
+            const savedFiles = [];
+            for (let i = 0; i < files.length; i++) {
+                const { blob, filename } = files[i];
+                try {
+                    const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    savedFiles.push(filename);
+                } catch (error) {
+                    console.error(`파일 저장 실패 / Failed to save file: ${filename}`, error);
+                    throw error;
+                }
+            }
+            return savedFiles;
+        }
+        
+        // 변환 함수 (재사용 가능하도록 분리)
+        async function convertFiles(autoSave = false) {
+            const files = filesInput.files;
             if (files.length === 0) {
                 alert('파일을 선택해주세요 / Please select files');
                 return;
             }
             
-            // 이전 다운로드 섹션 숨기기
+            // 이미 변환 중이면 중복 실행 방지
+            if (isConverting) {
+                return;
+            }
+            isConverting = true;
+            
+            // 이전 다운로드 섹션 숨기기 (초기화)
             const downloadSection = document.getElementById('downloadSection');
+            const downloadLink = document.getElementById('downloadLink');
             downloadSection.classList.remove('active');
+            
+            // 다운로드 링크 상태 완전히 초기화
+            downloadLink.onclick = null;
+            downloadLink.style.pointerEvents = 'auto';
+            downloadLink.href = '#';
+            downloadLink.download = '';
+            
+            // 이전 URL 정리 (메모리 누수 방지)
+            if (downloadLink.dataset.previousUrl) {
+                window.URL.revokeObjectURL(downloadLink.dataset.previousUrl);
+                delete downloadLink.dataset.previousUrl;
+            }
             
             // 로딩 상태 표시
             loading.classList.add('active');
             submitBtn.disabled = true;
-            submitBtn.textContent = '변환 중... / Converting...';
             
             try {
-                // FormData 생성
-                const formData = new FormData(form);
-                
-                // 서버에 요청 전송
-                const response = await fetch('/convert', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!response.ok) {
-                    throw new Error('변환 실패 / Conversion failed');
-                }
-                
-                // 응답을 Blob으로 받기
-                const blob = await response.blob();
-                
-                // Content-Type 확인
-                const contentType = response.headers.get('Content-Type');
-                const isZipFile = contentType && contentType.includes('application/zip');
-                
-                // Content-Disposition 헤더에서 파일명 추출
-                const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = isZipFile ? 'converted_images.zip' : 'converted_image.jpg';
-                if (contentDisposition) {
-                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-                    if (filenameMatch && filenameMatch[1]) {
-                        filename = filenameMatch[1].replace(/['"]/g, '');
-                    }
-                }
-                
-                // 파일 개수 확인
+                const resolution = document.getElementById('resolution').value;
+                const quality = document.getElementById('quality').value;
                 const fileCount = files.length;
-                const isZip = isZipFile || filename.endsWith('.zip');
                 
-                // 다운로드 링크 생성 및 표시
-                const url = window.URL.createObjectURL(blob);
-                const downloadLink = document.getElementById('downloadLink');
-                const downloadSection = document.getElementById('downloadSection');
-                const downloadInfo = downloadSection.querySelector('.download-info');
-                
-                downloadLink.href = url;
-                downloadLink.download = filename;
-                
-                // 다운로드 버튼 텍스트 설정
-                if (isZip && fileCount > 1) {
-                    downloadLink.textContent = `📦 ${fileCount}개 파일 압축 다운로드 / Download ${fileCount} files as ZIP`;
+                // 여러 파일일 때는 각각 개별적으로 변환
+                if (fileCount > 1) {
+                    submitBtn.textContent = `변환 중... (0/${fileCount}) / Converting... (0/${fileCount})`;
+                    
+                    const convertedFiles = [];
+                    for (let i = 0; i < files.length; i++) {
+                        submitBtn.textContent = `변환 중... (${i + 1}/${fileCount}) / Converting... (${i + 1}/${fileCount})`;
+                        const result = await convertSingleFile(files[i], resolution, quality);
+                        convertedFiles.push(result);
+                    }
+                    
+                    // 다운로드 섹션 표시
+                    const downloadInfo = downloadSection.querySelector('.download-info');
                     downloadInfo.innerHTML = `
                         <strong>✅ 변환 완료! / Conversion Complete!</strong><br>
-                        ${fileCount}개의 파일이 압축되어 있습니다 / ${fileCount} files are compressed<br>
+                        ${fileCount}개의 파일이 변환되었습니다 / ${fileCount} files converted<br>
                         아래 버튼을 클릭하여 저장 폴더를 선택하세요 / Click the button below to choose save folder
                     `;
+                    downloadLink.textContent = `📥 ${fileCount}개 파일 저장 / Save ${fileCount} files`;
+                    
+                    downloadSection.classList.add('active');
+                    resetLoadingState();
+                    
+                    // 저장 함수 설정
+                    const saveMultiple = async function(e) {
+                        e.preventDefault();
+                        
+                        if (!window.showDirectoryPicker) {
+                            alert('이 브라우저는 폴더 선택을 지원하지 않습니다. 각 파일을 개별적으로 다운로드합니다.\nThis browser does not support folder selection. Downloading files individually.');
+                            for (const { blob, filename } of convertedFiles) {
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = filename;
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                            }
+                            return;
+                        }
+                        
+                        try {
+                            const directoryHandle = await window.showDirectoryPicker();
+                            downloadLink.textContent = '저장 중... / Saving...';
+                            downloadLink.style.pointerEvents = 'none';
+                            
+                            const savedFiles = await saveMultipleFiles(convertedFiles, directoryHandle);
+                            
+                            downloadLink.textContent = `✅ ${savedFiles.length}개 파일 저장 완료! / ${savedFiles.length} files saved!`;
+                            downloadInfo.innerHTML = `
+                                <strong>✅ 저장 완료! / Save Complete!</strong><br>
+                                ${savedFiles.length}개의 파일이 선택한 폴더에 저장되었습니다 / ${savedFiles.length} files saved to selected folder
+                            `;
+                            
+                            // URL 정리
+                            for (const { blob } of convertedFiles) {
+                                if (blob.url) {
+                                    window.URL.revokeObjectURL(blob.url);
+                                }
+                            }
+                            
+                            downloadLink.style.pointerEvents = 'auto';
+                        } catch (error) {
+                            if (error.name === 'AbortError') {
+                                downloadLink.textContent = `📥 ${fileCount}개 파일 저장 / Save ${fileCount} files`;
+                            } else {
+                                console.error('Error:', error);
+                                alert('저장 중 오류가 발생했습니다 / An error occurred while saving: ' + error.message);
+                            }
+                            downloadLink.style.pointerEvents = 'auto';
+                        }
+                    };
+                    
+                    if (autoSave) {
+                        await saveMultiple({ preventDefault: () => {} });
+                    } else {
+                        downloadLink.onclick = saveMultiple;
+                    }
+                    
                 } else {
+                    // 단일 파일 처리 (기존 로직)
+                    submitBtn.textContent = '변환 중... / Converting...';
+                    
+                    const formData = new FormData(form);
+                    const response = await fetch('/convert', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('변환 실패 / Conversion failed');
+                    }
+                    
+                    const blob = await response.blob();
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = 'converted_image.jpg';
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                        if (filenameMatch && filenameMatch[1]) {
+                            filename = filenameMatch[1].replace(/['"]/g, '');
+                        }
+                    }
+                    
+                    const url = window.URL.createObjectURL(blob);
+                    const downloadInfo = downloadSection.querySelector('.download-info');
+                    
+                    downloadLink.dataset.previousUrl = url;
+                    downloadLink.href = url;
+                    downloadLink.download = filename;
                     downloadLink.textContent = `📥 ${filename} 다운로드 / Download ${filename}`;
                     downloadInfo.innerHTML = `
                         <strong>✅ 변환 완료! / Conversion Complete!</strong><br>
                         아래 버튼을 클릭하여 저장 폴더를 선택하세요 / Click the button below to choose save folder
                     `;
+                    
+                    downloadLink.style.pointerEvents = 'auto';
+                    downloadSection.classList.add('active');
+                    resetLoadingState();
+                    
+                    if (autoSave) {
+                        await saveToFolder(blob, filename, false, 1, url, downloadLink, downloadInfo);
+                    } else {
+                        downloadLink.onclick = async function(e) {
+                            e.preventDefault();
+                            await saveToFolder(blob, filename, false, 1, url, downloadLink, downloadInfo);
+                        };
+                    }
                 }
-                
-                // 다운로드 링크 설정
-                downloadLink.href = url;
-                downloadLink.download = filename;
-                
-                // 다운로드 섹션 표시
-                downloadSection.classList.add('active');
-                
-                // 로딩 상태 리셋
-                resetLoadingState();
-                
-                // 다운로드 링크 클릭 이벤트 - 폴더 선택 팝업
-                downloadLink.onclick = async function(e) {
-                    e.preventDefault();
-                    
-                    // File System Access API 지원 확인
-                    if (!window.showDirectoryPicker) {
-                        // 지원하지 않는 브라우저는 기본 다운로드
-                        alert('이 브라우저는 폴더 선택을 지원하지 않습니다. 기본 다운로드로 진행합니다.\nThis browser does not support folder selection. Using default download.');
-                        downloadLink.href = url;
-                        downloadLink.click();
-                        return;
-                    }
-                    
-                    try {
-                        // 폴더 선택 팝업 표시
-                        const directoryHandle = await window.showDirectoryPicker();
-                        
-                        // 로딩 표시
-                        downloadLink.textContent = '저장 중... / Saving...';
-                        downloadLink.style.pointerEvents = 'none';
-                        
-                        if (isZip && fileCount > 1) {
-                            // ZIP 파일 압축 해제 및 저장
-                            const zip = await JSZip.loadAsync(blob);
-                            let savedCount = 0;
-                            
-                            for (const [relativePath, file] of Object.entries(zip.files)) {
-                                if (!file.dir) {
-                                    const fileData = await file.async('blob');
-                                    const fileHandle = await directoryHandle.getFileHandle(relativePath, { create: true });
-                                    const writable = await fileHandle.createWritable();
-                                    await writable.write(fileData);
-                                    await writable.close();
-                                    savedCount++;
-                                }
-                            }
-                            
-                            downloadLink.textContent = `✅ ${savedCount}개 파일 저장 완료! / ${savedCount} files saved!`;
-                            downloadInfo.innerHTML = `
-                                <strong>✅ 저장 완료! / Save Complete!</strong><br>
-                                ${savedCount}개의 파일이 선택한 폴더에 저장되었습니다 / ${savedCount} files saved to selected folder
-                            `;
-                        } else {
-                            // 단일 파일 저장
-                            const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
-                            const writable = await fileHandle.createWritable();
-                            await writable.write(blob);
-                            await writable.close();
-                            
-                            downloadLink.textContent = `✅ 저장 완료! / Save Complete!`;
-                            downloadInfo.innerHTML = `
-                                <strong>✅ 저장 완료! / Save Complete!</strong><br>
-                                파일이 선택한 폴더에 저장되었습니다 / File saved to selected folder
-                            `;
-                        }
-                        
-                        // URL 정리
-                        window.URL.revokeObjectURL(url);
-                        
-                    } catch (error) {
-                        if (error.name === 'AbortError') {
-                            // 사용자가 취소한 경우
-                            downloadLink.textContent = isZip && fileCount > 1 
-                                ? `📦 ${fileCount}개 파일 저장 폴더 선택 / Choose folder for ${fileCount} files`
-                                : `📥 ${filename} 저장 폴더 선택 / Choose folder for ${filename}`;
-                        } else {
-                            console.error('Error:', error);
-                            alert('저장 중 오류가 발생했습니다 / An error occurred while saving: ' + error.message);
-                            // 오류 발생 시 기본 다운로드로 폴백
-                            downloadLink.href = url;
-                            downloadLink.click();
-                        }
-                        downloadLink.style.pointerEvents = 'auto';
-                    }
-                };
                 
             } catch (error) {
                 console.error('Error:', error);
                 alert('변환 중 오류가 발생했습니다 / An error occurred during conversion');
                 resetLoadingState();
             }
+        }
+        
+        // 파일 선택 시 저장 완료 목록 초기화만 수행
+        filesInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                // 저장 완료 목록 초기화
+                const downloadSection = document.getElementById('downloadSection');
+                downloadSection.classList.remove('active');
+                
+                // 초기 세팅으로 리셋 (해상도 6000x6000, 품질 90)
+                document.getElementById('resolution').value = '6000x6000';
+                document.getElementById('quality').value = '90';
+            }
+        });
+        
+        // 폼 제출 시 변환 실행 (다운로드 버튼 활성화)
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await convertFiles(false); // 다운로드 버튼만 활성화
         });
         
         // 페이지 로드 시 로딩 상태 리셋 (이전 상태가 남아있을 경우)
