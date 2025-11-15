@@ -175,6 +175,42 @@
         .info-box strong {
             color: #333;
         }
+        
+        .download-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f7ff;
+            border-radius: 10px;
+            border: 2px solid #667eea;
+        }
+        
+        .download-section.active {
+            display: block;
+        }
+        
+        .download-link {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .download-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .download-info {
+            color: #555;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
     </style>
 </head>
 <body>
@@ -229,12 +265,22 @@
             <p>변환 중... / Converting...</p>
         </div>
         
+        <div class="download-section" id="downloadSection">
+            <div class="download-info">
+                <strong>✅ 변환 완료! / Conversion Complete!</strong><br>
+                아래 버튼을 클릭하여 저장 위치를 선택하세요 / Click the button below to choose save location
+            </div>
+            <a href="#" id="downloadLink" class="download-link" download>
+                파일 다운로드 / Download File
+            </a>
+        </div>
+        
         <div class="info-box">
             <strong>사용 방법 / How to Use:</strong><br>
             1. PNG 파일을 선택하세요 / Select PNG files<br>
             2. 원하는 해상도를 입력하세요 / Enter desired resolution<br>
             3. 변환하기 버튼을 클릭하세요 / Click Convert button<br>
-            4. 변환된 파일이 자동으로 다운로드됩니다 / Converted files will be downloaded automatically
+            4. 변환 완료 후 다운로드 버튼을 클릭하여 저장 위치를 선택하세요 / After conversion, click download button to choose save location
         </div>
     </div>
     
@@ -259,6 +305,10 @@
                 return;
             }
             
+            // 이전 다운로드 섹션 숨기기
+            const downloadSection = document.getElementById('downloadSection');
+            downloadSection.classList.remove('active');
+            
             // 로딩 상태 표시
             loading.classList.add('active');
             submitBtn.disabled = true;
@@ -281,11 +331,6 @@
                 // 응답을 Blob으로 받기
                 const blob = await response.blob();
                 
-                // 파일 다운로드
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                
                 // Content-Disposition 헤더에서 파일명 추출
                 const contentDisposition = response.headers.get('Content-Disposition');
                 let filename = 'converted_images.zip';
@@ -296,14 +341,23 @@
                     }
                 }
                 
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
+                // 다운로드 링크 생성 및 표시
+                const url = window.URL.createObjectURL(blob);
+                const downloadLink = document.getElementById('downloadLink');
+                const downloadSection = document.getElementById('downloadSection');
                 
-                // 다운로드 완료 후 로딩 상태 리셋
-                setTimeout(resetLoadingState, 500);
+                downloadLink.href = url;
+                downloadLink.download = filename;
+                downloadLink.textContent = `📥 ${filename} 다운로드 / Download ${filename}`;
+                
+                // 다운로드 섹션 표시
+                downloadSection.classList.add('active');
+                
+                // 로딩 상태 리셋
+                resetLoadingState();
+                
+                // 다운로드 링크 클릭 시 처리 (선택사항 - 자동 다운로드 원하면 주석 해제)
+                // downloadLink.click();
                 
             } catch (error) {
                 console.error('Error:', error);
