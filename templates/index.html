@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PNG to JPG Converter / PNG 일괄 JPG 변환기</title>
-    <!-- JSZip 라이브러리 (ZIP 파일 압축 해제용) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -282,10 +280,7 @@
             1. PNG 파일을 선택하세요 / Select PNG files<br>
             2. 원하는 해상도를 입력하세요 / Enter desired resolution<br>
             3. 변환하기 버튼을 클릭하세요 / Click Convert button<br>
-            4. 변환 완료 후 버튼을 클릭하여 저장 폴더를 선택하세요 / After conversion, click button to choose save folder<br>
-            <br>
-            <strong>참고 / Note:</strong> 폴더 선택 기능은 Chrome, Edge 등 최신 브라우저에서만 지원됩니다.<br>
-            Folder selection is only supported in modern browsers like Chrome and Edge.
+            4. 변환된 파일이 자동으로 다운로드됩니다 / Converted files will be downloaded automatically
         </div>
     </div>
     
@@ -362,101 +357,29 @@
                 
                 // 다운로드 버튼 텍스트 설정
                 if (isZip && fileCount > 1) {
-                    downloadLink.textContent = `📦 ${fileCount}개 파일 저장 폴더 선택 / Choose folder for ${fileCount} files`;
+                    downloadLink.textContent = `📦 ${fileCount}개 파일 압축 다운로드 / Download ${fileCount} files as ZIP`;
                     downloadInfo.innerHTML = `
                         <strong>✅ 변환 완료! / Conversion Complete!</strong><br>
                         ${fileCount}개의 파일이 압축되어 있습니다 / ${fileCount} files are compressed<br>
-                        아래 버튼을 클릭하여 저장 폴더를 선택하세요 / Click the button below to choose save folder
+                        아래 버튼을 클릭하여 다운로드하세요 / Click the button below to download
                     `;
                 } else {
-                    downloadLink.textContent = `📥 ${filename} 저장 폴더 선택 / Choose folder for ${filename}`;
+                    downloadLink.textContent = `📥 ${filename} 다운로드 / Download ${filename}`;
                     downloadInfo.innerHTML = `
                         <strong>✅ 변환 완료! / Conversion Complete!</strong><br>
-                        아래 버튼을 클릭하여 저장 폴더를 선택하세요 / Click the button below to choose save folder
+                        아래 버튼을 클릭하여 다운로드하세요 / Click the button below to download
                     `;
                 }
+                
+                // 다운로드 링크 설정
+                downloadLink.href = url;
+                downloadLink.download = filename;
                 
                 // 다운로드 섹션 표시
                 downloadSection.classList.add('active');
                 
                 // 로딩 상태 리셋
                 resetLoadingState();
-                
-                // 다운로드 링크 클릭 이벤트 - 폴더 선택 팝업
-                downloadLink.onclick = async function(e) {
-                    e.preventDefault();
-                    
-                    // File System Access API 지원 확인
-                    if (!window.showDirectoryPicker) {
-                        // 지원하지 않는 브라우저는 기본 다운로드
-                        alert('이 브라우저는 폴더 선택을 지원하지 않습니다. 기본 다운로드로 진행합니다.\nThis browser does not support folder selection. Using default download.');
-                        downloadLink.href = url;
-                        downloadLink.click();
-                        return;
-                    }
-                    
-                    try {
-                        // 폴더 선택 팝업 표시
-                        const directoryHandle = await window.showDirectoryPicker();
-                        
-                        // 로딩 표시
-                        downloadLink.textContent = '저장 중... / Saving...';
-                        downloadLink.style.pointerEvents = 'none';
-                        
-                        if (isZip && fileCount > 1) {
-                            // ZIP 파일 압축 해제 및 저장
-                            const zip = await JSZip.loadAsync(blob);
-                            let savedCount = 0;
-                            
-                            for (const [relativePath, file] of Object.entries(zip.files)) {
-                                if (!file.dir) {
-                                    const fileData = await file.async('blob');
-                                    const fileHandle = await directoryHandle.getFileHandle(relativePath, { create: true });
-                                    const writable = await fileHandle.createWritable();
-                                    await writable.write(fileData);
-                                    await writable.close();
-                                    savedCount++;
-                                }
-                            }
-                            
-                            downloadLink.textContent = `✅ ${savedCount}개 파일 저장 완료! / ${savedCount} files saved!`;
-                            downloadInfo.innerHTML = `
-                                <strong>✅ 저장 완료! / Save Complete!</strong><br>
-                                ${savedCount}개의 파일이 선택한 폴더에 저장되었습니다 / ${savedCount} files saved to selected folder
-                            `;
-                        } else {
-                            // 단일 파일 저장
-                            const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
-                            const writable = await fileHandle.createWritable();
-                            await writable.write(blob);
-                            await writable.close();
-                            
-                            downloadLink.textContent = `✅ 저장 완료! / Save Complete!`;
-                            downloadInfo.innerHTML = `
-                                <strong>✅ 저장 완료! / Save Complete!</strong><br>
-                                파일이 선택한 폴더에 저장되었습니다 / File saved to selected folder
-                            `;
-                        }
-                        
-                        // URL 정리
-                        window.URL.revokeObjectURL(url);
-                        
-                    } catch (error) {
-                        if (error.name === 'AbortError') {
-                            // 사용자가 취소한 경우
-                            downloadLink.textContent = isZip && fileCount > 1 
-                                ? `📦 ${fileCount}개 파일 저장 폴더 선택 / Choose folder for ${fileCount} files`
-                                : `📥 ${filename} 저장 폴더 선택 / Choose folder for ${filename}`;
-                        } else {
-                            console.error('Error:', error);
-                            alert('저장 중 오류가 발생했습니다 / An error occurred while saving: ' + error.message);
-                            // 오류 발생 시 기본 다운로드로 폴백
-                            downloadLink.href = url;
-                            downloadLink.click();
-                        }
-                        downloadLink.style.pointerEvents = 'auto';
-                    }
-                };
                 
             } catch (error) {
                 console.error('Error:', error);
