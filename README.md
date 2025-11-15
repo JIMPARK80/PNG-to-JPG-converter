@@ -250,6 +250,8 @@ You can modify these settings in `png_to_jpg_batch.py`:
 
 A web-based version is available for server deployment!
 
+![Web Interface Screenshot](docs/images/web-interface.png)
+
 ### Quick Start
 
 ```bash
@@ -285,6 +287,8 @@ See `DEPLOYMENT.md` for detailed deployment instructions.
 ## 웹 애플리케이션
 
 서버 배포용 웹 버전이 제공됩니다!
+
+![웹 인터페이스 스크린샷](docs/images/web-interface.png)
 
 ### 빠른 시작
 
