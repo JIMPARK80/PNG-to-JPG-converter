@@ -13,7 +13,7 @@ output_dir.mkdir(exist_ok=True)
 print(f"=== PNG to JPG Batch Converter {VERSION} ===")
 print("해상도를 입력하세요 (예: 6000x6000 또는 4000x4000)")
 print("Enter resolution (e.g., 6000x6000 or 4000x4000)")
-print("엔터만 누르면 기본값 4000x4000을 사용합니다 / Press Enter for default 4000x4000")
+print("엔터만 누르면 기본값 6000x6000을 사용합니다 / Press Enter for default 6000x6000")
 print()
 
 user_input = input("해상도 입력 / Resolution: ").strip()
@@ -32,14 +32,14 @@ if user_input:
             max_height = size
         print(f"설정된 해상도 / Resolution set: {max_width}x{max_height}px\n")
     except ValueError:
-        print("잘못된 입력입니다. 기본값 4000x4000을 사용합니다.")
-        print("Invalid input. Using default 4000x4000.\n")
-        max_width = 4000
-        max_height = 4000
+        print("잘못된 입력입니다. 기본값 6000x6000을 사용합니다.")
+        print("Invalid input. Using default 6000x6000.\n")
+        max_width = 6000
+        max_height = 6000
 else:
     # Default values / 기본값
-    max_width = 4000
-    max_height = 4000
+    max_width = 6000
+    max_height = 6000
     print(f"기본 해상도 사용 / Using default resolution: {max_width}x{max_height}px\n")
 
 target_dpi = (300, 300)   # DPI 설정

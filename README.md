@@ -172,7 +172,7 @@ pip list
    ```
 
 4. Enter the desired resolution when prompted (e.g., `6000x6000` or `4000x4000`)
-   - Press Enter to use default 4000x4000
+   - Press Enter to use default 6000x6000
    - You can enter a single number (e.g., `6000`) for square images
 
 5. Find converted JPG files in the `output` folder
@@ -205,7 +205,7 @@ pip list
    ```
 
 4. 프롬프트가 나타나면 원하는 해상도를 입력하세요 (예: `6000x6000` 또는 `4000x4000`)
-   - 엔터만 누르면 기본값 4000x4000을 사용합니다
+   - 엔터만 누르면 기본값 6000x6000을 사용합니다
    - 단일 숫자(예: `6000`)를 입력하면 정사각형으로 설정됩니다
 
 5. 변환된 JPG 파일은 `output` 폴더에서 찾을 수 있습니다.
@@ -218,13 +218,13 @@ When you run the script, you can enter the resolution interactively:
 
 - Format: `6000x6000` or `4000x4000` (width x height)
 - Single number: `6000` (creates square 6000x6000)
-- Press Enter: Uses default 4000x4000
+- Press Enter: Uses default 6000x6000
 
 ### Advanced Configuration
 
 You can modify these settings in `png_to_jpg_batch.py`:
 
-- Default resolution: Change the default values (currently 4000x4000)
+- Default resolution: Change the default values (currently 6000x6000)
 - `target_dpi`: DPI setting (default: 300)
 - `quality`: JPEG quality 1-100 (default: 90)
 
@@ -236,13 +236,13 @@ You can modify these settings in `png_to_jpg_batch.py`:
 
 - 형식: `6000x6000` 또는 `4000x4000` (가로 x 세로)
 - 단일 숫자: `6000` (정사각형 6000x6000 생성)
-- 엔터만 누르기: 기본값 4000x4000 사용
+- 엔터만 누르기: 기본값 6000x6000 사용
 
 ### 고급 설정
 
 `png_to_jpg_batch.py` 파일에서 다음 설정을 변경할 수 있습니다:
 
-- 기본 해상도: 기본값 변경 (현재 4000x4000)
+- 기본 해상도: 기본값 변경 (현재 6000x6000)
 - `target_dpi`: DPI 설정 (기본값: 300)
 - `quality`: JPEG 품질 1-100 (기본값: 90)
 

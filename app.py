@@ -82,7 +82,7 @@ def convert():
         return redirect(url_for('index'))
     
     # Get resolution from form
-    resolution = request.form.get('resolution', '4000x4000').strip()
+    resolution = request.form.get('resolution', '6000x6000').strip()
     try:
         if 'x' in resolution.lower():
             parts = resolution.lower().split('x')
